@@ -180,6 +180,7 @@ self.onmessage = (e: MessageEvent) => {
                     const boQty = parseFloat(getValPrio(row, ['bo qt', 'backorder', 'bo_'])) || 0;
 
                     const fStock = stockQty + onPurchaseQty + receiveQty - boQty;
+                    const amount = fStock * avgCost;
 
                     return {
                         partNo: String(partNo),
@@ -197,6 +198,7 @@ self.onmessage = (e: MessageEvent) => {
                         mktCateg: String(mktCateg),
                         largeGroup: String(largeGroup),
                         fStock,
+                        amount,
                         frekuensi,
                         fMos: 0,
                         monthlyDemand,

@@ -42,6 +42,7 @@ export interface OutputData {
   
   // New additions
   fStock: number;
+  amount: number; // Nilai Rupiah dari F Stock * AVG Cost
   frekuensi: number;
   fMos: number;
 

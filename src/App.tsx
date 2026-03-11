@@ -18,6 +18,9 @@ type StatusFilter = 'ALL' | 'AMAN' | 'RESTOCK' | 'OVERSTOCK' | 'DEAD_STOCK';
 const THRESHOLD_RESTOCK = 1.5; // MOS < 1.5 months means restock
 const THRESHOLD_OVERSTOCK = 2.0; // MOS > 2.0 months means overstock
 
+// Helper Format Rupiah
+const formatRp = (num: number) => new Intl.NumberFormat('id-ID', { style: 'currency', currency: 'IDR', minimumFractionDigits: 0 }).format(num);
+
 // Komponen Mini Chart (Sparkline) untuk setiap baris
 const Sparkline = ({ data }: { data: number[] }) => {
   // Grafik dibaca persis searah dengan sel Excel: N01 di kiri, N12 di kanan.
@@ -357,6 +360,7 @@ export default function App() {
         'AVG Demand': item.avgDemand, // diisi setelah baseData recalc
         'MOS': item.mos, // diisi setelah baseData recalc
         'F Stock': item.fStock,
+        'Amount': item.amount || 0,
         'Frekuensi': item.frekuensi,
         'F MOS': item.fMos,
         'Mkt Categ': item.mktCateg,
@@ -470,6 +474,7 @@ export default function App() {
             monthlyDemand24: Array(24).fill(0),
             status: 'AMAN' as StatusFilter,
             frekuensi: 0,
+            amount: 0,
             mos: 0,
             fMos: 0,
             isDeadStock: false
@@ -479,6 +484,7 @@ export default function App() {
         // Summing aggregates
         acc[key].stockQty += part.stockQty;
         acc[key].fStock += part.fStock;
+        acc[key].amount += (part.amount || 0);
         acc[key].j1Total += part.j1;
         acc[key].j2Total += part.j2;
         acc[key].avgDemand += part.avgDemand;
@@ -514,11 +520,20 @@ export default function App() {
 
   // 4. Hitung Statistik untuk Widget Murni Berdasarkan pivotedTabData (Mengabaikan filter tombol status yang sedang diklik user)
   const stats = useMemo(() => {
-    const totalItems = pivotedTabData.length;
-    const overstockCount = pivotedTabData.filter(item => item.status === 'OVERSTOCK').length;
-    const deadstockCount = pivotedTabData.filter(item => item.status === 'DEAD_STOCK').length;
-    const restockCount = pivotedTabData.filter(item => item.status === 'RESTOCK').length;
-    return { totalItems, overstockCount, deadstockCount, restockCount };
+    let totalItems = 0; let totalAmount = 0;
+    let overstockCount = 0; let overstockAmount = 0;
+    let deadstockCount = 0; let deadstockAmount = 0;
+    let restockCount = 0; let restockAmount = 0;
+    
+    pivotedTabData.forEach(item => {
+      totalItems++;
+      totalAmount += (item.amount || 0);
+      if (item.status === 'OVERSTOCK') { overstockCount++; overstockAmount += (item.amount || 0); }
+      else if (item.status === 'DEAD_STOCK') { deadstockCount++; deadstockAmount += (item.amount || 0); }
+      else if (item.status === 'RESTOCK') { restockCount++; restockAmount += (item.amount || 0); }
+    });
+
+    return { totalItems, totalAmount, overstockCount, overstockAmount, deadstockCount, deadstockAmount, restockCount, restockAmount };
   }, [pivotedTabData]);
 
   // 5. Aplikasikan Filter Status Barulah Sortir (Trending)
@@ -564,6 +579,7 @@ export default function App() {
       'ABC Categ': item.abcCategory,
       'Stock Qty': item.stockQty,
       'F Stock': item.fStock,
+      'Amount (Rp)': item.amount || 0,
       'Avg Demand': item.avgDemand,
       'Frekuensi': item.frekuensi,
       'MOS': item.mos,
@@ -739,7 +755,7 @@ export default function App() {
               <h2 className="text-sm font-semibold text-slate-800">Ringkasan Gudang ({activeTab})</h2>
             </div>
             <span className="text-xs font-medium text-slate-500 bg-slate-100 px-2 py-1 rounded-md">
-              Total: {stats.totalItems.toLocaleString()} Item
+              Total: {stats.totalItems.toLocaleString()} Item | {formatRp(stats.totalAmount)}
             </span>
           </div>
           <div className="grid grid-cols-1 md:grid-cols-4 gap-3">
@@ -755,7 +771,10 @@ export default function App() {
                   <p className="text-[10px] text-slate-500 mt-0.5">MOS &lt; {THRESHOLD_RESTOCK} bulan</p>
                 </div>
               </div>
-              <p className="text-xl font-bold text-amber-600 mt-2">{stats.restockCount.toLocaleString()}</p>
+              <div>
+                <p className="text-xl font-bold text-amber-600 mt-2">{stats.restockCount.toLocaleString()}</p>
+                <p className="text-[10px] font-semibold text-amber-700/70 mt-1">{formatRp(stats.restockAmount)}</p>
+              </div>
             </div>
 
             {/* Stat: Overstock */}
@@ -770,7 +789,10 @@ export default function App() {
                   <p className="text-[10px] text-slate-500 mt-0.5">MOS &gt; {THRESHOLD_OVERSTOCK} bulan</p>
                 </div>
               </div>
-              <p className="text-xl font-bold text-indigo-600 mt-2">{stats.overstockCount.toLocaleString()}</p>
+              <div>
+                <p className="text-xl font-bold text-indigo-600 mt-2">{stats.overstockCount.toLocaleString()}</p>
+                <p className="text-[10px] font-semibold text-indigo-700/70 mt-1">{formatRp(stats.overstockAmount)}</p>
+              </div>
             </div>
 
             {/* Stat: Dead Stock */}
@@ -785,7 +807,10 @@ export default function App() {
                   <p className="text-[10px] text-slate-500 mt-0.5">Demand 0 (J1)</p>
                 </div>
               </div>
-              <p className="text-xl font-bold text-red-600 mt-2">{stats.deadstockCount.toLocaleString()}</p>
+              <div>
+                <p className="text-xl font-bold text-red-600 mt-2">{stats.deadstockCount.toLocaleString()}</p>
+                <p className="text-[10px] font-semibold text-red-700/70 mt-1">{formatRp(stats.deadstockAmount)}</p>
+              </div>
             </div>
 
             {/* Trend Chart */}
@@ -886,6 +911,7 @@ export default function App() {
                   </th>
                   <th className="px-4 py-3 text-right">STOCK</th>
                   <th className="px-4 py-3 text-right">F STOCK</th>
+                  <th className="px-4 py-3 text-right">AMOUNT (Rp)</th>
                   <th className="px-4 py-3 text-right">AVG DEMAND</th>
                   <th className="px-4 py-3 text-right">FREKUENSI</th>
                   <th className="px-4 py-3 text-right">MOS</th>
@@ -930,6 +956,7 @@ export default function App() {
                     </td>
                     <td className="px-4 py-2.5 text-right font-mono text-slate-900 font-semibold">{row.stockQty.toLocaleString('id-ID')}</td>
                     <td className="px-4 py-2.5 text-right font-mono text-slate-700">{row.fStock.toLocaleString('id-ID')}</td>
+                    <td className="px-4 py-2.5 text-right font-mono text-indigo-600 font-medium">{formatRp(row.amount || 0)}</td>
                     <td className="px-4 py-2.5 text-right font-mono text-slate-600">{row.avgDemand.toFixed(1)}</td>
                     <td className="px-4 py-2.5 text-right font-mono text-slate-700">{row.frekuensi}</td>
                     <td className="px-4 py-2.5 text-right font-mono">
