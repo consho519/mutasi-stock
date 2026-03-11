@@ -16,7 +16,7 @@ type StatusFilter = 'ALL' | 'AMAN' | 'RESTOCK' | 'OVERSTOCK' | 'DEAD_STOCK';
 
 // Thresholds based on Yamaha Distributor Standards
 const THRESHOLD_RESTOCK = 1.5; // MOS < 1.5 months means restock
-const THRESHOLD_OVERSTOCK = 4.0; // MOS > 4.0 months means overstock
+const THRESHOLD_OVERSTOCK = 2.0; // MOS > 2.0 months means overstock
 
 // Komponen Mini Chart (Sparkline) untuk setiap baris
 const Sparkline = ({ data }: { data: number[] }) => {
